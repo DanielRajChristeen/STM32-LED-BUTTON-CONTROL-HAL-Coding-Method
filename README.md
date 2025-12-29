@@ -1,36 +1,35 @@
 # **STM32 LED & Button Control — HAL Coding Method**
 
-A practical STM32F4 project that demonstrates how to **control an LED with a button press using STM32 HAL libraries** and **bare bones HAL-centric code**.
+A beginner-friendly STM32 firmware project that demonstrates **LED blink delay control using two push buttons**, implemented using **STM32 HAL libraries**.
 
-This repo is about **real embedded interaction**, leveraging the **Hardware Abstraction Layer (HAL)** to make GPIO control intuitive, robust, and ready for industrial-grade development.
-
----
-
-## 🎯 Project Vision
-
-In embedded engineering, the simplest user interface often tells you *everything* about your system’s health: **LED Feedback + Button Interaction**.
-
-This project demonstrates tried-and-true HAL techniques to:
-
-* Read digital inputs (button presses)
-* Write digital outputs (LED on/off)
-* Use HAL peripherals with clean, readable code
-
-It’s perfect for developers transitioning from tutorials into real firmware design.
+This project teaches how to use HAL APIs to interact with GPIO and manage timing — all with clear, maintainable code.
 
 ---
 
-## 🧠 What the Code Does
+## 🎯 What This Project Does
 
-This project uses STM32 HAL libraries to:
+This firmware implements:
 
-✔ Initialize system and peripherals
-✔ Configure LEDs and push-button GPIO pins
-✔ Read button state via `HAL_GPIO_ReadPin()`
-✔ Toggle LED status using `HAL_GPIO_WritePin()` and `HAL_GPIO_TogglePin()`
-✔ Use debounced logic to handle push-button inputs reliably
+🔹 **LED toggling** on **PA5**
+🔹 **Button 1 (PA6)** — increase blink delay by **100 ms**
+🔹 **Button 2 (PA7)** — decrease blink delay by **100 ms**
+🔹 **Delay clamped** between **0 ms and 1000 ms**
+🔹 LED blink speed updates immediately based on button feedback
 
-HAL simplifies hardware control by wrapping low-level operations into consistent APIs, making maintenance and collaboration easier. ([DeepBlue][1])
+This behavior models **user-driven timing control**, a common pattern in embedded UI logic.
+
+---
+
+## 🧠 Why HAL Coding?
+
+Using the **STM32 HAL (Hardware Abstraction Layer)** gives you:
+
+✔ Consistent peripheral APIs
+✔ Readable, maintainable code
+✔ Easier transition to advanced features
+✔ Less low-level verbosity compared to raw registers
+
+But you still maintain full control over timing logic and GPIO behavior.
 
 ---
 
@@ -42,41 +41,35 @@ STM32-LED-BUTTON-CONTROL-HAL-Coding-Method/
 │   ├── Inc/
 │   │   └── main.h            # Project headers
 │   └── Src/
-│       └── main.c            # HAL code for LED + button logic
+│       └── main.c            # HAL logic for LED + buttons
 ├── Drivers/
-│   └── CMSIS/                # Core support files
-├── .cproject                 # IDE config
-├── .project                  # IDE config
-├── .mxproject                # HAL software package config
-├── LED_BUTTON_CTRL_HAL_project.ioc  # Optional CubeMX config
-├── STM32F446RETX_FLASH.ld    # Linker script
-├── STM32F446RETX_RAM.ld      # Linker script
-├── LICENSE.txt               # MIT License
+│   └── CMSIS/                # MCU startup & HAL headers
+├── LED_BUTTON_CTRL_HAL.ioc   # Optional CubeMX project
+├── .cproject                  # IDE config
+├── .project                   # IDE config
+├── STM32F446RETX_FLASH.ld     # Linker script
+├── STM32F446RETX_RAM.ld       # Linker script
+├── LICENSE.txt
 └── README.md
 ```
 
-The presence of HAL and CubeIDE project metadata makes this repo **IDE-ready** while preserving control over HAL usage. ([GitHub][2])
+---
+
+## 🛠 Hardware Setup
+
+| Component | MCU Pin | Label |
+| --------- | ------- | ----- |
+| LED       | PA5     | D13   |
+| Button 1  | PA6     | D12   |
+| Button 2  | PA7     | D11   |
+
+❗ Ensure the buttons are wired with proper **pull-up or pull-down resistors**. Internal pull-ups or pull-downs can be configured in code.
 
 ---
 
-## 🛠 Prerequisites
+## 🚀 Getting Started
 
-Before you begin:
-
-1. **STM32CubeIDE** installed (includes HAL libraries and build tools)
-2. **ST-LINK debug probe** (integrated on most Nucleo boards)
-3. Target board with:
-
-   * One LED connected to a GPIO
-   * One push-button wired to a GPIO
-
-STM32 HAL is part of the STM32Cube software ecosystem that standardizes peripheral usage across STM32 families. ([Wikipedia][3])
-
----
-
-## 🚀 Quick Start
-
-### 1) Clone the Repo
+### 1. Clone the Repo
 
 ```bash
 git clone https://github.com/DanielRajChristeen/STM32-LED-BUTTON-CONTROL-HAL-Coding-Method.git
@@ -84,72 +77,114 @@ git clone https://github.com/DanielRajChristeen/STM32-LED-BUTTON-CONTROL-HAL-Cod
 
 ---
 
-### 2) Open with STM32CubeIDE
+### 2. Open in STM32CubeIDE
 
-* `File → Import → Existing Projects`
-* Select this directory
-* Project will load with HAL support
+* **File → Import → Existing Projects**
+* Select the cloned repository
+* Allow IDE to index and resolve HAL dependencies
 
 ---
 
-### 3) Build & Flash
+### 3. Build & Flash
 
 * Click **Build**
-* Connect your board via ST-LINK
+* Connect your STM32 board via **ST-LINK**
 * Click **Debug / Run**
+
+The LED will start blinking at the default delay value.
 
 ---
 
-### 4) Run the Demo
+## 💡 How the Logic Works
 
-Press the button:
+### Delay Control
 
-* **LED turns ON**
-  Release the button:
-* **LED turns OFF or toggles** (based on implementation)
-
-Inside `main.c`, typical HAL patterns will include:
+We start with a default blink delay, e.g.:
 
 ```c
-HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
-if(HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin) == GPIO_PIN_SET) {
-    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+uint32_t blinkDelay = 500; // ms
+```
+
+Button logic:
+
+```c
+if (HAL_GPIO_ReadPin(BUTTON1_GPIO_Port, BUTTON1_Pin) == GPIO_PIN_SET) {
+    blinkDelay += 100;
+}
+
+if (HAL_GPIO_ReadPin(BUTTON2_GPIO_Port, BUTTON2_Pin) == GPIO_PIN_SET) {
+    blinkDelay -= 100;
 }
 ```
 
-The HAL functions:
+### Range Protection
 
-* `HAL_GPIO_ReadPin()` — read digital input (button)
-* `HAL_GPIO_WritePin()` — set LED state
-* `HAL_GPIO_TogglePin()` — flip LED state
+```c
+if (blinkDelay > 1000) blinkDelay = 1000;
+if (blinkDelay < 0)    blinkDelay = 0;
+```
 
-This reduces the need for manual register fiddling while preserving determinism. ([DeepBlue][1])
+### LED Toggling
 
----
+```c
+HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+HAL_Delay(blinkDelay);
+```
 
-## 📚 Learning Outcomes
-
-By diving into this project you will:
-
-✔ Understand HAL GPIO init & handling
-✔ Learn real button debounce patterns
-✔ Master HAL API usage in practical scenarios
-✔ Scale this base pattern to real user interface logic
-
-This is the foundation for interactive embedded applications.
+This loop continuously blinks the LED with the current delay value, reflecting real-time control from the buttons.
 
 ---
 
-## 💡 Next Steps (Strategic)
+## 📘 Code Snippet — HAL Logic (Conceptual)
 
-To take this project further:
+Here’s what the core logic might look like in `main.c`:
 
-✨ Add **software debouncing**
-✨ Implement **interrupt-based button control**
-✨ Add a **state machine** for advanced UI logic
-✨ Integrate a **timer** for blinking patterns
+```c
+while (1)
+{
+    if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6) == GPIO_PIN_SET) {
+        blinkDelay += 100;
+    }
 
-HAL sets you up for scalable features without rewriting core logic.
+    if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7) == GPIO_PIN_SET) {
+        blinkDelay -= 100;
+    }
+
+    if (blinkDelay > 1000) blinkDelay = 1000;
+    if (blinkDelay < 0)    blinkDelay = 0;
+
+    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+    HAL_Delay(blinkDelay);
+}
+```
+
+This simple loop pumps out continuous toggling with user-controlled speed. HAL functions make it easy to read pins and toggle outputs.
+
+---
+
+## 📚 What You’ll Learn
+
+By working with this project you will:
+
+✔ Use HAL GPIO input/output APIs
+✔ Handle user input for dynamic behavior
+✔ Control timing with `HAL_Delay()`
+✔ Implement range-protected values
+✔ Build maintainable, middleware-friendly firmware
+
+---
+
+## 🧩 Common Enhancements
+
+Take this demo to the next level:
+
+* Software debouncing for buttons
+* Interrupt-driven button logic instead of polling
+* LCD display showing current delay
+* Store delay in EEPROM/Flash
+* Add state machine for menu navigation
+
+HAL provides the building blocks for professional embedded features.
 
 ---
 
@@ -164,14 +199,9 @@ Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+copies of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 ```
 
 ---
